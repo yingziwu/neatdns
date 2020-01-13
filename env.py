@@ -4,20 +4,37 @@ import socket
 
 import requests
 
-ALEXA_TOP_1M_URL = 'https://s3.amazonaws.com/alexa-static/top-1m.csv.zip'
 
-if os.path.exists('config.json'):
-    with open('config.json', 'r') as f:
-        config = json.load(f)
+def read_config_file(config):
     TMP_FOLDER = config['TMP_FOLDER']
     POISONING_DOMAINS_LIST = config['POISONING_DOMAINS_LIST']
     BIND_QUEEY_LOG_PATH = config['BIND_QUEEY_LOG_PATH']
     BIND_RESOLVE_LOG_PATH = config['BIND_RESOLVE_LOG_PATH']
+    ALEXA_LOCAL = config['ALEXA_LOCAL']
+    return TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL
+
+
+if os.path.exists('config_debug.json'):
+    with open('config_debug.json', 'r') as f:
+        config = json.load(f)
+    TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, \
+    BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL = read_config_file(config)
+elif os.path.exists('config.json'):
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, \
+    BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL = read_config_file(config)
 else:
     TMP_FOLDER = '/tmp/neatdns_new'
     POISONING_DOMAINS_LIST = 'domain_list_poisoning.json'
     BIND_QUEEY_LOG_PATH = '/tmp/named/query.log'
     BIND_RESOLVE_LOG_PATH = '/tmp/named/resolver.log'
+    ALEXA_LOCAL = False
+
+if ALEXA_LOCAL:
+    ALEXA_TOP_1M_URL = 'http://127.0.0.1:8000/top-1m.csv.zip'
+else:
+    ALEXA_TOP_1M_URL = 'https://s3.amazonaws.com/alexa-static/top-1m.csv.zip'
 
 TLD_LIST_PATH = os.path.join(TMP_FOLDER, 'tld_list.json')
 
@@ -32,7 +49,7 @@ if os.path.exists(TLD_LIST_PATH):
     with open(TLD_LIST_PATH, 'r') as f:
         TLD_LIST = json.load(f)
 else:
-    resp = requests.get('https://data.iana.org/TLD/tlds-alpha-by-domain.txt')
+    resp = requests.get('https://data.iana.org/TLD/tlds-alpha-by-domain.txt', timeout=5)
     lines = resp.text.splitlines()
     lines.pop(0)
     TLD_LIST = [x.lower() for x in lines]

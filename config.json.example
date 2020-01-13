@@ -1,4 +1,5 @@
 {
+    "ALEXA_LOCAL": false,
     "BIND_QUEEY_LOG_PATH": "/var/log/named/query.log",
     "BIND_RESOLVE_LOG_PATH": "/var/log/named/resolver.log",
     "POISONING_DOMAINS_LIST": "/etc/named/domain_list_poisoning.json",

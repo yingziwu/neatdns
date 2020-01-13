@@ -1,5 +1,4 @@
 import os
-import subprocess
 from zipfile import ZipFile
 
 import requests
@@ -8,7 +7,7 @@ import env
 import middle
 
 # 下载及解压 Alexa top 1m
-resp = requests.get(env.ALEXA_TOP_1M_URL)
+resp = requests.get(env.ALEXA_TOP_1M_URL, timeout=5)
 top_1m_zip = os.path.join(env.TMP_FOLDER, 'top-1m.csv.zip')
 top_1m = os.path.join(env.TMP_FOLDER, 'top-1m.csv')
 with open(top_1m_zip, 'wb') as f:
@@ -21,17 +20,12 @@ env.TMP_FOLDER = os.path.join(env.TMP_FOLDER, 'init')
 if not os.path.exists(env.TMP_FOLDER):
     os.mkdir(env.TMP_FOLDER)
 
-mzdns0 = os.path.join(env.TMP_FOLDER, 'zdns0.json')
-mzdns1 = os.path.join(env.TMP_FOLDER, 'zdns1.json')
-print('开始扫描 Alexa top 1m 域名……')
-subprocess.call(['zdns', 'AAAA', '-alexa', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '1', '-input-file', top_1m,
-                 '-output-file', mzdns0])
-print('开始扫描 Alexa top 1m 域名（加 www.前缀）……')
-subprocess.call(
-    ['zdns', 'AAAA', '-alexa', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '1', '-prefix', 'www',
-     '-input-file', top_1m, '-output-file', mzdns1])
+out1 = os.path.join(env.TMP_FOLDER, 'zdns0.json')
+out2 = os.path.join(env.TMP_FOLDER, 'zdns1.json')
+out_fnames = [out1, out2]
+middle.zdns_scan(top_1m, out_fnames, True)
 
 # 整理扫描结果
-lines = middle.merge_lines(mzdns0,mzdns1)
+lines = middle.merge_lines(out1, out2)
 middle.clean_zdns_output(lines, env.POISONING_DOMAINS_LIST)
-print('init scan Finish!')
+print('Init Finish!')
