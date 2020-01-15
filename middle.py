@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import re
 
 import tldextract
 
@@ -9,7 +10,7 @@ import env
 
 def zdns_scan(in_fname, out_fnames, alexa=False):
     '''执行扫描命令'''
-    base_cmd = ['zdns', 'AAAA', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '1']
+    base_cmd = ['zdns', 'TXT', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '1', '-retries', '1']
     out1, out2 = out_fnames
     if alexa:
         base_cmd.append('-alexa')
@@ -36,6 +37,59 @@ def merge_lines(mzdns0, mzdns1):
     return lines
 
 
+def zdns_detect(domain):
+    '''探测域名是否被污染'''
+    in_fname = os.path.join(env.TMP_FOLDER, 'zdns_tmp.txt')
+    with open(in_fname, 'w') as f:
+        f.write(domain + '\n')
+    out1 = os.path.join(env.TMP_FOLDER, 'zdns_%s_0.json' % domain)
+    out2 = os.path.join(env.TMP_FOLDER, 'zdns_%s_1.json' % domain)
+    out_fnames = [out1, out2]
+    zdns_scan(in_fname, out_fnames)
+    lines = merge_lines(out1, out2)
+    for line in lines:
+        result = json.loads(line)
+        if result['status'] == 'NOERROR':
+            return True
+
+    return False
+
+
+def recursion_test(registered_domain, test_domain, pre_test_domain, p):
+    '''返回最短未被污染域名'''
+    q = zdns_detect(test_domain)
+    if test_domain == registered_domain:
+        if q is True:
+            domain = test_domain
+        else:
+            domain = pre_test_domain
+    else:
+        if q is True:
+            p = q
+            pre_test_domain = test_domain
+            test_domain = re.sub('^([\w\-]+\.)', '', test_domain)
+            return recursion_test(registered_domain, test_domain, pre_test_domain, p)
+        else:
+            domain = test_domain
+
+    return domain
+
+
+def reduce_domain(raw_domain):
+    '''精简域名'''
+    ext = tldextract.extract(raw_domain)
+    registered_domain = ext.registered_domain
+
+    pre_test_domain = None
+    if raw_domain == registered_domain:
+        return raw_domain
+    else:
+        test_domain = re.sub('^([\w\-]+\.)', '', raw_domain)
+        p, q = None, None
+        domain = recursion_test(registered_domain, test_domain, pre_test_domain, p)
+        return domain
+
+
 def clean_zdns_output(lines, domains_file_path):
     '''清洗zdns输出文件，并将其与原域名列表合并'''
     domains = []
@@ -45,25 +99,29 @@ def clean_zdns_output(lines, domains_file_path):
             answers = result["data"]["answers"]
             for answer in answers:
                 if answer["type"] == "A" or answer["type"] == "AAAA":
-                    ext = tldextract.extract(result["name"])
-                    domain = ext.registered_domain
+                    domain = reduce_domain(result["name"])
                     domains.append(domain)
                     break
 
     with open(os.path.join(env.TMP_FOLDER, 'new_poisoning_domains.json'), 'w') as f:
         json.dump(domains, f)
 
-    with open(domains_file_path, 'r') as f:
-        domains_old = json.load(f)
+    if domains_file_path == env.POISONING_DOMAINS_LIST:
+        domains_new = []
+        with open(domains_file_path, 'r') as f:
+            domains_old = json.load(f)
+        domains_new.extend(domains_old)
+        domains_new.extend(domains)
+        domains = list(set(domains_new))
+    else:
+        domains = list(set(domains))
 
-    domains_new = []
-    domains_new.extend(domains_old)
-    domains_new.extend(domains)
-    domains = list(set(domains_new))
     for domain in domains:
-        if domain in env.TLD_LIST or domain == '':
+        if domain in env.TLD_LIST or domain in env.NO_PROXY_DOMAINS or domain == '' or domain is None:
             domains.remove(domain)
     domains.sort()
+
+    print('Output file is: ' + domains_file_path)
     with open(domains_file_path, 'w') as f:
         json.dump(domains, f, indent=4, sort_keys=True)
 

@@ -19,7 +19,7 @@ for query_log_line in query_log_lines:
         print(query_log_line)
 
 # 扫描
-env.TMP_FOLDER = os.path.join(env.TMP_FOLDER, time.strftime('%m-%d_%H-%M-%S'))
+env.TMP_FOLDER = os.path.join(env.TMP_FOLDER, 'update' + time.strftime('%m-%d_%H-%M-%S'))
 if not os.path.exists(env.TMP_FOLDER):
     os.mkdir(env.TMP_FOLDER)
 
