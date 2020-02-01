@@ -100,6 +100,7 @@ def clean_zdns_output(lines, domains_file_path):
             for answer in answers:
                 if answer["type"] == "A" or answer["type"] == "AAAA":
                     domain = reduce_domain(result["name"])
+                    domain = domain.lower()
                     domains.append(domain)
                     break
 
@@ -116,8 +117,8 @@ def clean_zdns_output(lines, domains_file_path):
     else:
         domains = list(set(domains))
 
-    for domain in domains:
-        if domain in env.TLD_LIST or domain in env.NO_PROXY_DOMAINS or domain == '' or domain is None:
+    for domain in domains: 
+        if domain in env.TLD_LIST or domain in env.NO_PROXY_DOMAINS or domain == '' or domain is None or domain.lower() != domain:
             domains.remove(domain)
     domains.sort()
 
