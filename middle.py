@@ -10,7 +10,7 @@ import env
 
 def zdns_scan(in_fname, out_fnames, alexa=False):
     '''执行扫描命令'''
-    base_cmd = ['zdns', 'TXT', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '1', '-retries', '1']
+    base_cmd = ['zdns', 'AAAA', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '2', '-retries', '1']
     out1, out2 = out_fnames
     if alexa:
         base_cmd.append('-alexa')
@@ -18,7 +18,7 @@ def zdns_scan(in_fname, out_fnames, alexa=False):
 
     cmd1, cmd2 = base_cmd.copy(), base_cmd.copy()
     cmd1.extend(['-output-file', out1])
-    cmd2.extend(['-prefix', 'www', '-output-file', out2])
+    cmd2.extend(['-prefix', 'www.', '-output-file', out2])
     cmds = [cmd1, cmd2]
     for cmd in cmds:
         print(' '.join(cmd))
@@ -100,9 +100,10 @@ def clean_zdns_output(lines, domains_file_path):
             for answer in answers:
                 if answer["type"] == "A" or answer["type"] == "AAAA":
                     domain = reduce_domain(result["name"])
-                    domain = domain.lower()
-                    domains.append(domain)
-                    break
+                    if domain:
+                        domain = domain.lower()
+                        domains.append(domain)
+                        break
 
     with open(os.path.join(env.TMP_FOLDER, 'new_poisoning_domains.json'), 'w') as f:
         json.dump(domains, f)

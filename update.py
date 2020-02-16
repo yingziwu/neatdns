@@ -7,9 +7,9 @@ import middle
 
 # 读取日志
 zdns_domains = []
+
 with open(env.BIND_QUEEY_LOG_PATH, 'r') as f:
     query_log_lines = middle.tail(f, 10000)
-
 for query_log_line in query_log_lines:
     m = re.search('\((.*)\):', query_log_line)
     if m:
@@ -17,6 +17,16 @@ for query_log_line in query_log_lines:
         zdns_domains.append(zdns_domain)
     else:
         print(query_log_line)
+
+with open(env.BIND_RESOLVE_LOG_PATH, 'r') as f:
+    resolve_log_lines = middle.tail(f, 3000)
+for resolve_log_line in resolve_log_lines:
+    m = re.search('resolving (.*)\/', resolve_log_line)
+    if m:
+        zdns_domain = m.groups()[0]
+        zdns_domains.append(zdns_domain)
+    else:
+        print(resolve_log_line)
 
 # 扫描
 env.TMP_FOLDER = os.path.join(env.TMP_FOLDER, 'update' + time.strftime('%m-%d_%H-%M-%S'))
