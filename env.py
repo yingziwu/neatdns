@@ -31,9 +31,6 @@ else:
     BIND_RESOLVE_LOG_PATH = '/tmp/named/resolver.log'
     ALEXA_LOCAL = False
 
-with open('no_proxy_domains.json', 'r') as f:
-    NO_PROXY_DOMAINS = json.load(f)
-
 if ALEXA_LOCAL:
     ALEXA_TOP_1M_URL = 'http://127.0.0.1:8000/top-1m.csv.zip'
 else:

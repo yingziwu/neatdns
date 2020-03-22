@@ -10,7 +10,7 @@ import env
 
 def zdns_scan(in_fname, out_fnames, alexa=False):
     '''执行扫描命令'''
-    base_cmd = ['zdns', 'AAAA', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '2', '-retries', '1']
+    base_cmd = ['zdns', 'TXT', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '2', '-retries', '1']
     out1, out2 = out_fnames
     if alexa:
         base_cmd.append('-alexa')
@@ -75,7 +75,7 @@ def recursion_test(registered_domain, test_domain, pre_test_domain, p):
     return domain
 
 
-def reduce_domain(raw_domain):
+def reduce_domain(raw_domain, old_domains):
     '''精简域名'''
     ext = tldextract.extract(raw_domain)
     registered_domain = ext.registered_domain
@@ -83,6 +83,8 @@ def reduce_domain(raw_domain):
     pre_test_domain = None
     if raw_domain == registered_domain:
         return raw_domain
+    elif raw_domain in old_domains:
+        return
     else:
         test_domain = re.sub('^([\w\-]+\.)', '', raw_domain)
         p, q = None, None
@@ -92,6 +94,12 @@ def reduce_domain(raw_domain):
 
 def clean_zdns_output(lines, domains_file_path):
     '''清洗zdns输出文件，并将其与原域名列表合并'''
+    try:
+        with open(domains_file_path, 'r') as f:
+            old_domains = json.load(f)
+    except FileNotFoundError as e:
+        old_domains = []
+
     domains = []
     for line in lines:
         result = json.loads(line)
@@ -99,7 +107,7 @@ def clean_zdns_output(lines, domains_file_path):
             answers = result["data"]["answers"]
             for answer in answers:
                 if answer["type"] == "A" or answer["type"] == "AAAA":
-                    domain = reduce_domain(result["name"])
+                    domain = reduce_domain(result["name"], old_domains)
                     if domain:
                         domain = domain.lower()
                         domains.append(domain)
@@ -118,8 +126,8 @@ def clean_zdns_output(lines, domains_file_path):
     else:
         domains = list(set(domains))
 
-    for domain in domains: 
-        if domain in env.TLD_LIST or domain in env.NO_PROXY_DOMAINS or domain == '' or domain is None or domain.lower() != domain:
+    for domain in domains:
+        if domain in env.TLD_LIST or domain == '' or domain is None or domain.lower() != domain:
             domains.remove(domain)
     domains.sort()
 
