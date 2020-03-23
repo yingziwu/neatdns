@@ -131,6 +131,12 @@ def clean_zdns_output(lines, domains_file_path):
             domains.remove(domain)
     domains.sort()
 
+    # Add Negative trust anchor
+    new_domains = list(set(domain).difference(set(old_domains)))
+    for new_domain in new_domains:
+        cmd = ['rndc', 'nta', '-lifetime', '604800', new_domain]
+        subprocess.call(cmd)
+
     print('Output file is: ' + domains_file_path)
     with open(domains_file_path, 'w') as f:
         json.dump(domains, f, indent=4, sort_keys=True)
