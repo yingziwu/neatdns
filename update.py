@@ -9,7 +9,7 @@ import middle
 zdns_domains = []
 
 with open(env.BIND_QUEEY_LOG_PATH, 'r') as f:
-    query_log_lines = middle.tail(f, 10000)
+    query_log_lines = middle.tail(f, 50000)
 for query_log_line in query_log_lines:
     m = re.search('\((.*)\):', query_log_line)
     if m:
@@ -19,7 +19,7 @@ for query_log_line in query_log_lines:
         print(query_log_line)
 
 with open(env.BIND_RESOLVE_LOG_PATH, 'r') as f:
-    resolve_log_lines = middle.tail(f, 3000)
+    resolve_log_lines = middle.tail(f, 100000)
 for resolve_log_line in resolve_log_lines:
     m = re.search('resolving (.*)\/', resolve_log_line)
     if m:
