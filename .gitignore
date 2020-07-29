@@ -131,3 +131,4 @@ config.json
 config_debug*.json
 domain_list_poisoning.json
 .vscode
+.env

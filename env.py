@@ -3,33 +3,17 @@ import os
 import socket
 
 import requests
+from environs import Env
 
+env = Env()
+env.read_env()
 
-def read_config_file(config):
-    TMP_FOLDER = config['TMP_FOLDER']
-    POISONING_DOMAINS_LIST = config['POISONING_DOMAINS_LIST']
-    BIND_QUEEY_LOG_PATH = config['BIND_QUEEY_LOG_PATH']
-    BIND_RESOLVE_LOG_PATH = config['BIND_RESOLVE_LOG_PATH']
-    ALEXA_LOCAL = config['ALEXA_LOCAL']
-    return TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL
-
-
-if os.path.exists('config_debug.json'):
-    with open('config_debug.json', 'r') as f:
-        config = json.load(f)
-    TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, \
-    BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL = read_config_file(config)
-elif os.path.exists('config.json'):
-    with open('config.json', 'r') as f:
-        config = json.load(f)
-    TMP_FOLDER, POISONING_DOMAINS_LIST, BIND_QUEEY_LOG_PATH, \
-    BIND_RESOLVE_LOG_PATH, ALEXA_LOCAL = read_config_file(config)
-else:
-    TMP_FOLDER = '/tmp/neatdns_new'
-    POISONING_DOMAINS_LIST = 'domain_list_poisoning.json'
-    BIND_QUEEY_LOG_PATH = '/tmp/named/query.log'
-    BIND_RESOLVE_LOG_PATH = '/tmp/named/resolver.log'
-    ALEXA_LOCAL = False
+TMP_FOLDER = env.str("TMP_FOLDER", "/tmp/neatdns_new")
+POISONING_DOMAINS_LIST = env.str("POISONING_DOMAINS_LIST", "domain_list_poisoning.json")
+BIND_QUEEY_LOG_PATH = env.str("BIND_QUEEY_LOG_PATH", "/tmp/named/query.log")
+BIND_RESOLVE_LOG_PATH = env.str("BIND_RESOLVE_LOG_PATH", "/tmp/named/resolver.log")
+ALEXA_LOCAL = env.bool("ALEXA_LOCAL", False)
+ADD_NTA = env.bool("ADD_NTA", True)
 
 if ALEXA_LOCAL:
     ALEXA_TOP_1M_URL = 'http://127.0.0.1:8000/top-1m.csv.zip'

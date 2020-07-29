@@ -10,7 +10,7 @@ import env
 
 def zdns_scan(in_fname, out_fnames, alexa=False):
     '''执行扫描命令'''
-    base_cmd = ['zdns', 'TXT', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '2', '-retries', '1']
+    base_cmd = ['zdns', 'DS', '-conf-file', env.RESOLVE_CONF_FNAME, '-timeout', '10', '-retries', '2']
     out1, out2 = out_fnames
     if alexa:
         base_cmd.append('-alexa')
@@ -55,8 +55,10 @@ def zdns_detect(domain):
     return False
 
 
-def recursion_test(registered_domain, test_domain, pre_test_domain, p):
-    '''返回最短未被污染域名'''
+def recursion_test(registered_domain, test_domain, pre_test_domain, old_domains):
+    '''返回最短未被污染域名
+    :param old_domains:
+    '''
     q = zdns_detect(test_domain)
     if test_domain == registered_domain:
         if q is True:
@@ -65,10 +67,12 @@ def recursion_test(registered_domain, test_domain, pre_test_domain, p):
             domain = pre_test_domain
     else:
         if q is True:
-            p = q
             pre_test_domain = test_domain
             test_domain = re.sub('^([\w\-]+\.)', '', test_domain)
-            return recursion_test(registered_domain, test_domain, pre_test_domain, p)
+            if test_domain in old_domains:
+                return test_domain
+            else:
+                return recursion_test(registered_domain, test_domain, pre_test_domain, old_domains)
         else:
             domain = test_domain
 
@@ -85,10 +89,12 @@ def reduce_domain(raw_domain, old_domains):
         return raw_domain
     elif raw_domain in old_domains:
         return
+    elif registered_domain in old_domains:
+        return
     else:
         test_domain = re.sub('^([\w\-]+\.)', '', raw_domain)
         p, q = None, None
-        domain = recursion_test(registered_domain, test_domain, pre_test_domain, p)
+        domain = recursion_test(registered_domain, test_domain, pre_test_domain, old_domains)
         return domain
 
 
@@ -132,10 +138,11 @@ def clean_zdns_output(lines, domains_file_path):
     domains.sort()
 
     # Add Negative trust anchor
-    new_domains = list(set(domain).difference(set(old_domains)))
-    for new_domain in new_domains:
-        cmd = ['rndc', 'nta', '-lifetime', '604800', new_domain]
-        subprocess.call(cmd)
+    if domains_file_path == env.POISONING_DOMAINS_LIST and env.ADD_NTA:
+        new_domains = list(set(domains).difference(set(old_domains)))
+        for new_domain in new_domains:
+            cmd = ['rndc', 'nta', '-lifetime', '604800', new_domain]
+            subprocess.call(cmd)
 
     print('Output file is: ' + domains_file_path)
     with open(domains_file_path, 'w') as f:
