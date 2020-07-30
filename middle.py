@@ -91,6 +91,8 @@ def reduce_domain(raw_domain, old_domains):
         return
     elif registered_domain in old_domains:
         return
+    elif registered_domain == '':
+        return
     else:
         test_domain = re.sub('^([\w\-]+\.)', '', raw_domain)
         p, q = None, None
